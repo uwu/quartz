@@ -2,6 +2,9 @@
 
 quartz is a simple JavaScript transform import utility that allows you to evaluate code with ESM imports and exports as well as do transforms on them.
 
+# installation
+`npm install @uwu/quartz`
+
 ### example
 
 ```JavaScript
