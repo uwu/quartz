@@ -1,5 +1,5 @@
 const resolve = (path, relativeTo) => {
-	if (path[0] === "/") return path;
+	if (path[0] === "/" || !relativeTo) return path;
 
 	const parts = relativeTo.split("/");
 	for (const part of path.split("/")) {
@@ -34,7 +34,7 @@ export default ({ urlImport, localImport, quartz }) => {
         subModuleId = name;
       } else {
         if (!localImport) return;
-        subModuleId = resolve(name, moduleId);
+        subModuleId = resolve(name, name.startsWith(".") ? moduleId : "");
         rawCode = await localImport(subModuleId);
       }
 

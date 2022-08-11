@@ -11,8 +11,11 @@ importers:
   packages/quartz-plugin-recursive-bundler:
     specifiers:
       '@uwu/quartz': workspace:*
+      quartz:*: link:@uwu/quartz:*
     dependencies:
       '@uwu/quartz': link:../quartz
+    devDependencies:
+      quartz:*: link:@uwu/quartz:*
 
   packages/quartz-plugin-url-import:
     specifiers: {}

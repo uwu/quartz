@@ -17,7 +17,10 @@
     "url": "https://github.com/uwu/quartz/issues"
   },
   "homepage": "https://github.com/uwu/quartz/blob/main/packages/quartz-plugin-recursive-bundler#readme",
-  "dependencies": {
+  "devDependencies": {
+    "@uwu/quartz": "workspace:*"
+  },
+  "peerDependencies": {
     "@uwu/quartz": "workspace:*"
   }
 }
