@@ -1,0 +1,18 @@
+lockfileVersion: 5.4
+
+importers:
+
+  packages/quartz:
+    specifiers: {}
+
+  packages/quartz-plugin-provide-dep:
+    specifiers: {}
+
+  packages/quartz-plugin-recursive-bundler:
+    specifiers:
+      '@uwu/quartz': workspace:*
+    dependencies:
+      '@uwu/quartz': link:../quartz
+
+  packages/quartz-plugin-url-import:
+    specifiers: {}

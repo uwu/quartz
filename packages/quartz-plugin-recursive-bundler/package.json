@@ -7,11 +7,17 @@
   "types": "index.d.ts",
   "type": "module",
   "repository": "github:uwu/quartz",
-  "keywords": ["quartz", "bundler"],
+  "keywords": [
+    "quartz",
+    "bundler"
+  ],
   "author": "Cain Atkinson",
   "license": "CC0-1.0",
   "bugs": {
     "url": "https://github.com/uwu/quartz/issues"
   },
-  "homepage": "https://github.com/uwu/quartz/blob/main/packages/quartz-plugin-recursive-bundler#readme"
+  "homepage": "https://github.com/uwu/quartz/blob/main/packages/quartz-plugin-recursive-bundler#readme",
+  "dependencies": {
+    "@uwu/quartz": "workspace:*"
+  }
 }

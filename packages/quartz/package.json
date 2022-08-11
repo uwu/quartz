@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "description": "A simple JavaScript transform tool meant to be used at runtime.",
   "main": "index.js",
+  "module": "index.js",
+  "types": "index.d.ts",
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"

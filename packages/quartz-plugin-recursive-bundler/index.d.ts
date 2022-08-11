@@ -1,12 +1,13 @@
 declare module "quartz-plugin-recursive-bundler";
+import quartz, { QuartzConfig } from "@uwu/quartz"
 
-type ToAwait<T> = T | Promise<T>;
+type MaybePromise<T> = T | Promise<T>;
 
 declare const _default: (cfg: {
-	quartz: () => any, // TODO: typeof quartz
-	urlImport?: (url: string) => ToAwait<string | undefined>,
-	localImport?: (path: string) => ToAwait<string | undefined>
-}) => any; // TODO: use real quartz types here
+	quartz: typeof quartz,
+	urlImport?: (url: string) => MaybePromise<string | undefined>,
+	localImport?: (path: string) => MaybePromise<string | undefined>
+}) => QuartzConfig;
 
 export default _default;
 
