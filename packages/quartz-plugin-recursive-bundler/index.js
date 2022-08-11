@@ -1,16 +1,16 @@
 const resolve = (path, relativeTo) => {
-	if (path[0] === "/" || !relativeTo) return path;
+  if (path[0] === "/" || !relativeTo) return path;
 
-	const parts = relativeTo.split("/");
-	for (const part of path.split("/")) {
-		if (part === ".") parts.pop();
-		else if (part === "..") {
-			parts.pop();
-			parts.pop();
-		} else parts.push(part);
-	}
+  const parts = relativeTo.split("/");
+  for (const part of path.split("/")) {
+    if (part === ".") parts.pop();
+    else if (part === "..") {
+      parts.pop();
+      parts.pop();
+    } else parts.push(part);
+  }
 
-	return parts.join("/");
+  return parts.join("/");
 };
 
 export default ({ urlImport, localImport, quartz }) => {
@@ -53,4 +53,4 @@ export default ({ urlImport, localImport, quartz }) => {
 };
 
 // tree shakable simple implementation of urlImport() using fetch
-export const fetchUrlImport = (code) => fetch(code).then(r => r.text());
+export const fetchUrlImport = (code) => fetch(code).then((r) => r.text());
