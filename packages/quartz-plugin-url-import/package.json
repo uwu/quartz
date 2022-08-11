@@ -1,0 +1,23 @@
+{
+  "name": "quartz-plugin-url-import",
+  "version": "1.0.0",
+  "description": "A quartz plugin for automatically changing imports to point to a CDN when they haven't been found.",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/uwu/quartz.git"
+  },
+  "keywords": [
+    "quartz"
+  ],
+  "author": "uwu.network",
+  "license": "CC0-1.0",
+  "bugs": {
+    "url": "https://github.com/uwu/quartz/issues"
+  },
+  "homepage": "https://github.com/uwu/quartz#readme"
+}
