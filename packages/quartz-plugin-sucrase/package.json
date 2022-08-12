@@ -1,7 +1,7 @@
 {
-  "name": "quartz-plugin-commonjs",
+  "name": "quartz-plugin-sucrase",
   "version": "1.0.0",
-  "description": "A quartz plugin to support CommonJS.",
+  "description": "A quartz plugin to compile typescript and jsx.",
   "main": "index.js",
   "module": "index.js",
   "types": "index.d.ts",
@@ -15,12 +15,15 @@
   "bugs": {
     "url": "https://github.com/uwu/quartz/issues"
   },
-  "homepage": "https://github.com/uwu/quartz/blob/main/packages/quartz-plugin-commonjs",
+  "homepage": "https://github.com/uwu/quartz/blob/main/packages/quartz-plugin-sucrase",
   "devDependencies": {
     "@uwu/quartz": "workspace:*"
   },
   "peerDependencies": {
     "@uwu/quartz": "workspace:*"
   },
-  "sideEffects": false
+  "sideEffects": false,
+  "dependencies": {
+    "sucrase": "^3.25.0"
+  }
 }
