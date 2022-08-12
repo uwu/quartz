@@ -22,5 +22,6 @@
   },
   "peerDependencies": {
     "@uwu/quartz": "workspace:*"
-  }
+  },
+  "sideEffects": false
 }

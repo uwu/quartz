@@ -21,5 +21,6 @@
   "bugs": {
     "url": "https://github.com/uwu/quartz/issues"
   },
-  "homepage": "https://github.com/uwu/quartz#readme"
+  "homepage": "https://github.com/uwu/quartz#readme",
+  "sideEffects": false
 }
