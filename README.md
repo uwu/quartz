@@ -17,12 +17,13 @@ export default multiplyByTwo(5);
 import quartz from "quartz";
 import provideDep from "quartz-plugin-provide-dep";
 
-const ten = await quartz(inputJsCode, [
-  provideDep({
-    dependency: {
-      multiplyByTwo: (i) => i * 2
-    }
-  })
- ]
-) // this runs the code and handles the imports and exports automatically!
+const ten = await quartz(inputJsCode, {
+  plugins: [
+    provideDep({
+      dependency: {
+        multiplyByTwo: (i) => i * 2,
+      },
+    }),
+  ],
+}); // this runs the code and handles the imports and exports automatically!
 ```
