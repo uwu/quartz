@@ -12,7 +12,7 @@ export default () => ({
       ? undefined
       : code
           // replace const requires to simple imports
-          .replaceAll(constRequireRegex, "import $1 from \"$2\";")
+          .replaceAll(constRequireRegex, 'import $1 from "$2";')
           // replace let/var requires to imports and then local copies
           .replaceAll(
             lvRequireRegex,
