@@ -5,17 +5,20 @@ importers:
   packages/quartz:
     specifiers: {}
 
+  packages/quartz-plugin-commonjs:
+    specifiers:
+      '@uwu/quartz': workspace:*
+    devDependencies:
+      '@uwu/quartz': link:../quartz
+
   packages/quartz-plugin-provide-dep:
     specifiers: {}
 
   packages/quartz-plugin-recursive-bundler:
     specifiers:
       '@uwu/quartz': workspace:*
-      quartz:*: link:@uwu/quartz:*
-    dependencies:
-      '@uwu/quartz': link:../quartz
     devDependencies:
-      quartz:*: link:@uwu/quartz:*
+      '@uwu/quartz': link:../quartz
 
   packages/quartz-plugin-url-import:
     specifiers: {}

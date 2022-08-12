@@ -1,0 +1,27 @@
+{
+  "name": "quartz-plugin-commonjs",
+  "version": "1.0.0",
+  "description": "A quartz plugin to support CommonJS.",
+  "main": "index.js",
+  "module": "index.js",
+  "types": "index.d.ts",
+  "type": "module",
+  "repository": "github:uwu/quartz",
+  "keywords": [
+    "quartz",
+    "bundler"
+  ],
+  "author": "Cain Atkinson",
+  "license": "CC0-1.0",
+  "bugs": {
+    "url": "https://github.com/uwu/quartz/issues"
+  },
+  "homepage": "https://github.com/uwu/quartz/blob/main/packages/quartz-plugin-commonjs",
+  "devDependencies": {
+    "@uwu/quartz": "workspace:*"
+  },
+  "peerDependencies": {
+    "@uwu/quartz": "workspace:*"
+  },
+  "sideEffects": false
+}
