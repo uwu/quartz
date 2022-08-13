@@ -57,7 +57,7 @@ export default async function quartz(code, config = { plugins: [] }, moduleId = 
   const mappedImports = mapImports(userCode);
 
   userCode = processExports(
-    userCode.replaceAll(/import\s+(.*)\s+from\s+['"](.*)['"][;]?[\n]?/g, "")
+    userCode.replaceAll(/import\s+([^;]*?)\s+from\s+['"](.*?)['"][;]?[\n]?/gm, "")
   );
 
   let quartzStore = {};
