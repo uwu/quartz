@@ -1,6 +1,6 @@
 const funnyEvalCopy = eval;
 
-const importRegex = /import\s+(.*?)\s+from\s+['"](.*?)['"]/g;
+const importRegex = /import\s+([^;]*?)\s+from\s+['"](.*?)['"]/gm;
 const javaScriptVarNameRegex =
   /^[\p{L}\p{Nl}$_][\p{L}\p{Nl}$\p{Mn}\p{Mc}\p{Nd}\p{Pc}]*$/gu;
 
