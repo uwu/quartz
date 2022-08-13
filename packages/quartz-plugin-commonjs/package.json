@@ -1,6 +1,6 @@
 {
   "name": "quartz-plugin-commonjs",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A quartz plugin to support CommonJS.",
   "main": "index.js",
   "module": "index.js",
