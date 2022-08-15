@@ -66,14 +66,13 @@ export default async function quartz(code, config = { plugins: [] }, moduleId = 
   if (config?.plugins)
     for (const plugin of config.plugins) {
       let id = (Math.random() + 1).toString(36).substring(7);
-      const accessor = `$$$QUARTZSTORE["${id}"]`;
       quartzStore[id] = {};
 
       if (plugin?.resolve)
         for (const name in mappedImports) {
           const generated = await plugin.resolve({
             config,
-            accessor,
+            accessor: `$$$QUARTZSTORE["${id}"]`,
             store: quartzStore[id],
             name,
             imports: mappedImports[name],
