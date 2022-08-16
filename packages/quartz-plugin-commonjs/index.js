@@ -1,8 +1,8 @@
 // ignore if export anywhere, or import thats not dynamic (followed by not `(`)
-const ignoreRegex = /export\s+|import\s*?[^(]/g;
+const ignoreRegex = /^\s*?export\s+|import\s*?[^(]/g;
 const constRequireRegex = /const\s+([^;]*?)\s*=\s*require\("(.*?)"\)/gm;
 const lvRequireRegex = /(let|var)\s+([^;]*?)\s*=\s*require\("(.*?)"\)/gm;
-const moduleExportsRegex = /module.exports\s*=/g;
+const moduleExportsRegex = /(?<![\p{L}\p{Nl}$\p{Mn}\p{Mc}\p{Nd}\p{Pc}])module\.exports/g;
 
 let count = 0;
 
@@ -10,14 +10,8 @@ export default () => ({
   transform: ({ code }) =>
     code.match(ignoreRegex)
       ? undefined
-      : code
-          // replace const requires to simple imports
-          .replaceAll(constRequireRegex, 'import $1 from "$2";')
-          // replace let/var requires to imports and then local copies
-          .replaceAll(
-            lvRequireRegex,
-            `import ___${count++} from \"$3\"; $1 $2 = ___${count}`
-          )
-          // replace module.exports to export default
-          .replaceAll(moduleExportsRegex, "export default "),
+      : code = code
+          .replaceAll(constRequireRegex, (_, decl, name) => `import { default: ${decl} } from "${name}";`)
+          .replaceAll(lvRequireRegex, (_, type, decl, name) => `import ___${++count} from "${name}"; ${type} { default: ${decl} } = ___${count};`)
+          .replaceAll(moduleExportsRegex, "$$$$$$exp.default"),
 });
