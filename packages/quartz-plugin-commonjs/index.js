@@ -1,15 +1,8 @@
 // ignore if export anywhere, or import thats not dynamic (followed by not `(`)
-<<<<<<< Updated upstream
-const ignoreRegex = /^\s*?export\s+|import\s*?[^(]/g;
-const constRequireRegex = /const\s+([^;]*?)\s*=\s*require\("(.*?)"\)/gm;
-const lvRequireRegex = /(let|var)\s+([^;]*?)\s*=\s*require\("(.*?)"\)/gm;
-const moduleExportsRegex = /(?<![\p{L}\p{Nl}$\p{Mn}\p{Mc}\p{Nd}\p{Pc}])module\.exports/g;
-=======
 const ignoreRegex = /export\s+|import\s*?[^(]/g;
 const constRequireRegex = /const\s+([^;]*?)\s*=\s*require\(["'](.*?)["']\)/gm;
 const lvRequireRegex = /(let|var)\s+([^;]*?)\s*=\s*require\(["'](.*?)["']\)/gm;
 const moduleExportsRegex = /module.exports\s*=/g;
->>>>>>> Stashed changes
 
 let count = 0;
 
