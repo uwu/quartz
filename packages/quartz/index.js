@@ -4,13 +4,36 @@ const importRegex = /import\s+([^;]*?)\s+from\s+['"](.*?)['"]/gm;
 const javaScriptVarNameRegex =
   /^[\p{L}\p{Nl}$_][\p{L}\p{Nl}$\p{Mn}\p{Mc}\p{Nd}\p{Pc}]*$/gu;
 
+function segment(input) {
+  let depth = 0;
+  let item = "";
+  let res = [];
+
+  function add() {
+    if (item) res.push(item.trim());
+    item = "";
+  }
+
+  for (const c of input) {
+    if (depth === 0 && c === ",") add();
+    else {
+      item += c;
+      if (c === "{") depth++;
+      if (c === "}") depth--;
+    }
+  }
+
+  add();
+  return res;
+}
+
 function mapImports(code) {
   const dependencies = {};
 
   for (const [_, unmappedImports, moduleName] of [
     ...code.matchAll(importRegex),
   ]) {
-    let mappedImports = unmappedImports.split(/,(?=[^}]*(?:{|$))/g).map((i) => {
+    let mappedImports = segment(unmappedImports).map((i) => {
       const imp = i.trim();
 
       const allImport = imp.split("* as");
