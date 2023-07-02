@@ -1,0 +1,13 @@
+{
+  "private": true,
+  "type": "module",
+  "main": "quartz.tests.js",
+  "dependencies": {
+    "@uwu/quartz": "workspace:^",
+    "quartz-plugin-commonjs": "workspace:^",
+    "quartz-plugin-provide-dep": "workspace:^",
+    "quartz-plugin-recursive-bundler": "workspace:^",
+    "quartz-plugin-sucrase": "workspace:^",
+    "quartz-plugin-url-import": "workspace:^"
+  }
+}

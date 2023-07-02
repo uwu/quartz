@@ -38,6 +38,27 @@ importers:
 
   packages/quartz-plugin-url-import: {}
 
+  packages/quartz-tests:
+    dependencies:
+      '@uwu/quartz':
+        specifier: workspace:^
+        version: link:../quartz
+      quartz-plugin-commonjs:
+        specifier: workspace:^
+        version: link:../quartz-plugin-commonjs
+      quartz-plugin-provide-dep:
+        specifier: workspace:^
+        version: link:../quartz-plugin-provide-dep
+      quartz-plugin-recursive-bundler:
+        specifier: workspace:^
+        version: link:../quartz-plugin-recursive-bundler
+      quartz-plugin-sucrase:
+        specifier: workspace:^
+        version: link:../quartz-plugin-sucrase
+      quartz-plugin-url-import:
+        specifier: workspace:^
+        version: link:../quartz-plugin-url-import
+
 packages:
 
   /acorn@8.9.0:
