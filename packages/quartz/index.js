@@ -1,123 +1,120 @@
-const funnyEvalCopy = eval;
+import { findStaticImports, parseStaticImport, findExports } from "mlly";
 
-const importRegex = /import\s+([^;]*?)\s+from\s+['"](.*?)['"]/gm;
-const javaScriptVarNameRegex =
-  /^[\p{L}\p{Nl}$_][\p{L}\p{Nl}$\p{Mn}\p{Mc}\p{Nd}\p{Pc}]*$/gu;
+const destructurify = (obj) =>
+  Object.entries(obj)
+    .map(([k, v]) => `${v}:${k}`)
+    .reduce((p, c) => p + c + ",");
 
-function segment(input) {
-  let depth = 0;
-  let item = "";
-  let res = [];
-
-  function add() {
-    if (item) res.push(item.trim());
-    item = "";
-  }
-
-  for (const c of input) {
-    if (depth === 0 && c === ",") add();
-    else {
-      item += c;
-      if (c === "{") depth++;
-      if (c === "}") depth--;
-    }
-  }
-
-  add();
-  return res;
-}
-
-function mapImports(code) {
-  const dependencies = {};
-
-  for (const [_, unmappedImports, moduleName] of [
-    ...code.matchAll(importRegex),
-  ]) {
-    let mappedImports = segment(unmappedImports).map((i) => {
-      const imp = i.trim();
-
-      const allImport = imp.split("* as");
-      if (allImport.length > 1)
-        return `{ ...${allImport[1].split("}")[0].trim()} }`;
-
-      if (imp.includes(" as ")) return imp.replaceAll(" as ", ": ");
-
-      if (javaScriptVarNameRegex.test(imp)) return `{ default: ${imp} }`;
-
-      return imp;
-    });
-
-    if (!dependencies[moduleName]) dependencies[moduleName] = [];
-
-    dependencies[moduleName].push(...mappedImports);
-  }
-
-  return dependencies;
-}
-
-const processExports = (code) =>
-  code
-    .replaceAll("export default", "$$$$$$exp.default=")
-    .replaceAll(/export const (.*?)\s*=/g, "$$$$$$exp['$1']=")
-    .replaceAll(/export let (.*?)\s*=/g, "$$$$$$exp['$1']=")
-    .replaceAll(/export function (.*?)\(/g, "$$$$$$exp['$1']=function(");
-
-export default async function quartz(code, config = { plugins: [] }, moduleId = false) {
-  if (!code) return;
-
-  let userCode = code;
-
-  if (config?.plugins)
-    for (const plugin of config.plugins)
-      if (plugin?.transform) {
-        let transformed = await plugin.transform({ code: userCode, moduleId });
-
-        if (!transformed) break;
-
-        userCode = transformed;
-      }
-
-  const mappedImports = mapImports(userCode);
-
-  userCode = processExports(
-    userCode.replaceAll(/import\s+([^;]*?)\s+from\s+['"](.*?)['"][;]?[\n]?/gm, "")
-  );
-
-  let quartzStore = {};
+export default async function quartz(
+  code,
+  config = { plugins: [] },
+  moduleId = false
+) {
+  let generatedImports = "";
+  let generatedExports = "";
   let generatedCode = "";
 
-  if (config?.plugins)
+  for (const plugin of plugins) {
+    if (!plugin.transform) continue;
+
+    generatedCode = plugin.transform({ generatedCode })
+  }
+
+  const imports = findStaticImports(code);
+  const exports = findExports(code);
+
+  let fakeImports = "";
+  for (const exp of exports) {
+    if (exp.type != "named" || !exp.specifier) continue;
+
+    fakeImports += "import" + exp.code.slice(6) + ";";
+
+    exp.code = exp.code.slice(0, exp.code.lastIndexOf("from")).trim();
+    exp.specifier = undefined;
+  }
+
+  imports.push(...findStaticImports(fakeImports).map((f) => (f.fake = true)));
+
+  let quartzStore = {};
+
+  for (const imp of imports) {
+    if (!imp.fake)
+      generatedCode =
+        generatedCode.slice(0, imp.start - 1) +
+        " ".repeat(imp.end - imp.start) +
+        generatedCode.slice(imp.end - 1);
+
+    let id = (Math.random() + 1).toString(36).substring(7);
+
+    let store = (quartzStore[id] = {});
+    let accessor = `$$$QUARTZ_STORE["${id}"]`;
+
+    const parsedImport = parseStaticImport(imp);
+
     for (const plugin of config.plugins) {
-      let id = (Math.random() + 1).toString(36).substring(7);
-      quartzStore[id] = {};
+      if (!plugin.resolve) continue;
 
-      if (plugin?.resolve)
-        for (const name in mappedImports) {
-          const generated = await plugin.resolve({
-            config,
-            accessor: `$$$QUARTZSTORE["${id}"]`,
-            store: quartzStore[id],
-            name,
-            imports: mappedImports[name],
-            moduleId,
-          });
+      const generatedImport = await plugin.resolve({
+        config,
+        accessor,
+        store,
+        name: parsedImport.specifier,
+        moduleId,
+      });
 
-          if (!generated) break;
-          generatedCode += mappedImports[name]
-            .map((i) => `const ${i} = ${generated};`)
-            .join("");
-          delete mappedImports[name];
-        }
+      if (!generatedImport) continue;
+
+      const addImport = (name) =>
+        (generatedImports += `const ${name} = ${generatedImport};`);
+
+      if (parsedImport.defaultImport) addImport(parsedImport.defaultImport);
+      if (parsedImport.namespacedImport)
+        addImport(parsedImport.namespacedImport);
+      if (Object.keys(parsedImport.namedImports).length)
+        addImport("{" + destructurify(parsedImport.namedImports) + "}");
+
+      // Once we've handled the resolves for this import, we stop.
+      break;
+    }
+  }
+
+  let offset = 0;
+  for (const exp of exports) {
+    let assigner = "";
+
+    switch (exp.type) {
+      case "default":
+        assigner = "$$$QUARTZ_EXPORTS.default=";
+        break;
+      case "declaration":
+        assigner =
+          exp.declaration !== "function"
+            ? `$$$QUARTZ_EXPORTS["${exp.name}"]`
+            : `$$$QUARTZ_EXPORTS["${exp.name}"]=function ${exp.name}`;
+        break;
+      case "named":
+        assigner += `$$$QUARTZ_EXPORTS = { ...$$$QUARTZ_EXPORTS, ${destructurify(
+          parseStaticImport(
+            findStaticImports(
+              `import${exp.code.slice(6)} from "fake-module"`
+            )[0]
+          ).namedImports
+        )}};`;
+        break;
+      default:
+        break;
     }
 
-  let finalCode = `
-(async ($$$QUARTZSTORE) => {
-  let $$$exp = {};
-  ${generatedCode}
-  ${userCode}
-  return $$$exp;
-})
-`.trim();
+    generatedCode =
+      generatedCode.slice(0, exp.start + offset) +
+      assigner +
+      generatedCode.slice(exp.end + offset);
 
-  return funnyEvalCopy(finalCode)(quartzStore);
+    offset -= exp.end - exp.start;
+    offset += assigner.length;
+  }
+
+  return (0, eval)(
+    `(async ($$$QUARTZ_STORE, $$$QUARTZ_EXPORTS) => {${generatedImports}${generatedCode};${generatedExports};return $$$QUARTZ_EXPORTS})`
+  )(quartzStore, {});
 }
