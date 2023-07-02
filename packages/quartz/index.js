@@ -14,7 +14,7 @@ export default async function quartz(
   let generatedExports = "";
   let generatedCode = "";
 
-  for (const plugin of plugins) {
+  for (const plugin of config.plugins) {
     if (!plugin.transform) continue;
 
     generatedCode = plugin.transform({ generatedCode })
