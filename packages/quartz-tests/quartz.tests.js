@@ -90,9 +90,66 @@ test("plugin-sucrase: TSX", async (t) => {
 })
 
 test("plugin-url-import", async (t) => {
-  t.skip("TODO: ran out of time rn");
-})
+  // check we can run safely
+  try {
+    await import("https://esm.sh/lodash");
+  }
+  catch {
+    console.error("Pass --experimental-network-imports to node to test plugin-url-import");
+    t.skip();
+    return;
+  }
+
+  const code = `
+    export { useRef } from "react";
+    export { createElement } from "https://esm.run/react";
+  `;
+
+  const output1 = await quartz(code, {
+    plugins: [quartzPluginUrlImport()]
+  });
+
+  assert.ok(typeof output1.useRef === "function");
+  assert.ok(typeof output1.createElement === "function");
+  assert.ok(typeof output1.createElement("div", {}) === "object");
+
+  // unresolved import
+  await assert.rejects(
+    quartz(code, {
+      plugins: [quartzPluginUrlImport({ baseUrl: null })]
+    })
+  );
+
+  // unresolved import
+  await assert.rejects(quartz(code, {
+    plugins: [quartzPluginUrlImport({ existingUrls: false })]
+  }));
+});
 
 test("plugin-recursive-bundler", async (t) => {
-  t.skip("TODO: ohmygod this is gonna be so pain to test");
+  const files = {
+    "/source/foo/bar.js": `export default "bar";`,
+    "/source/baz.js": "export function baz(s) { return s.slice(1) }",
+    "/source/foo/main.js": `
+      import bar from "./bar.js";
+      import { baz } from "../baz.js";
+      
+      export const whatPiratesSay = baz(bar);
+      export { default as helloInternet } from "https://inter.net/totally/real/site";
+    `,
+  };
+
+  const output = await quartz(files["/source/foo/main.js"], {
+      plugins: [quartzPluginRecursiveBundler({
+        quartz,
+        localImport: (path) => files[path],
+        urlImport: (url) => `export default "I came from the internet! ${url}"`
+      })]
+    },
+    "/source/foo/main.js");
+
+  assert.deepStrictEqual(output, {
+    whatPiratesSay: "ar",
+    helloInternet: "I came from the internet! https://inter.net/totally/real/site"
+  });
 })

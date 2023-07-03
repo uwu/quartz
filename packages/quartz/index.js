@@ -16,8 +16,6 @@ export default async function quartz(
   moduleId = false
 ) {
   let generatedImports = "";
-  //let generatedExports = "";
-  //let generatedCode = "";
 
   for (const plugin of config.plugins)
     if (plugin.transform)
@@ -32,7 +30,7 @@ export default async function quartz(
 
     fakeImports += "import" + exp.code.slice(6) + ";";
 
-    exp.code = exp.code.slice(0, exp.code.lastIndexOf("from")).trim();
+    exp.code = exp.code.slice(0, exp.code.lastIndexOf("from")).replaceAll(/\w+ as/g, "").trim();
     exp.specifier = undefined;
   }
 

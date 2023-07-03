@@ -40,10 +40,10 @@ export default ({ urlImport, localImport, quartz }) => {
 
       if (rawCode === undefined) return;
 
-      store[++storeCounter] = await quartz(rawCode, subModuleId, {
+      store[++storeCounter] = await quartz(rawCode, {
         ...config,
         plugins: prePlugins,
-      });
+      }, subModuleId);
 
       return `${accessor}[${storeCounter}]`;
     },
