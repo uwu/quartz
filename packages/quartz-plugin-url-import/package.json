@@ -1,6 +1,6 @@
 {
   "name": "quartz-plugin-url-import",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A quartz plugin for automatically changing imports to point to a CDN when they haven't been found.",
   "main": "index.js",
   "type": "module",
