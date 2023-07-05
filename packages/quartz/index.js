@@ -1,4 +1,4 @@
-import { findStaticImports, parseStaticImport, findExports } from "mlly";
+import { findStaticImports, parseStaticImport, findExports } from "./esm_utils.js";
 
 const destructurifyImp = (obj) =>
   Object.entries(obj)
@@ -18,8 +18,7 @@ export default async function quartz(
   let generatedImports = "";
 
   for (const plugin of config.plugins)
-    if (plugin.transform)
-      code = plugin.transform({code});
+    if (plugin.transform) code = plugin.transform({ code });
 
   const imports = findStaticImports(code);
   const exports = findExports(code);
@@ -30,14 +29,19 @@ export default async function quartz(
 
     fakeImports += "import" + exp.code.slice(6) + ";";
 
-    exp.code = exp.code.slice(0, exp.code.lastIndexOf("from")).replaceAll(/\w+ as/g, "").trim();
+    exp.code = exp.code
+      .slice(0, exp.code.lastIndexOf("from"))
+      .replaceAll(/\w+ as/g, "")
+      .trim();
     exp.specifier = undefined;
   }
 
-  imports.push(...findStaticImports(fakeImports).map((f) => {
-    f.fake = true;
-    return f;
-  }));
+  imports.push(
+    ...findStaticImports(fakeImports).map((f) => {
+      f.fake = true;
+      return f;
+    })
+  );
 
   let quartzStore = {};
 
@@ -71,7 +75,8 @@ export default async function quartz(
       const addImport = (name) =>
         (generatedImports += `const ${name} = ${generatedImport};`);
 
-      if (parsedImport.defaultImport) addImport(`{default:${parsedImport.defaultImport}}`);
+      if (parsedImport.defaultImport)
+        addImport(`{default:${parsedImport.defaultImport}}`);
       if (parsedImport.namespacedImport)
         addImport(parsedImport.namespacedImport);
       if (Object.keys(parsedImport.namedImports).length)

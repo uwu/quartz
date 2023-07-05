@@ -11,10 +11,9 @@ export type QuartzPlugin = {
 
 	resolve?(ctx: {
 		config: QuartzConfig,
-		acessor: string,
+		accessor: string,
 		store: object,
 		name: string,
-		imports: Record<string, string[]>
 		moduleId: string
 	}): MaybePromise<string | undefined>
 }

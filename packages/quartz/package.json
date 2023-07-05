@@ -1,6 +1,6 @@
 {
   "name": "@uwu/quartz",
-  "version": "1.1.5",
+  "version": "1.1.6",
   "description": "A simple JavaScript transform tool meant to be used at runtime.",
   "main": "index.js",
   "module": "index.js",
@@ -24,6 +24,6 @@
   "homepage": "https://github.com/uwu/quartz#readme",
   "sideEffects": false,
   "dependencies": {
-    "mlly": "^1.4.0"
+    "acorn": "^8.10.0"
   }
 }
