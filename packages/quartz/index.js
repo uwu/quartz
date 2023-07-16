@@ -1,4 +1,25 @@
-import { findStaticImports, parseStaticImport, findExports } from "./esm_utils.js";
+import parseImports from "parse-imports";
+
+async function betterParseImports(code) {
+  const exports = [];
+
+  // This looks stupid but it's less iterations
+  const imports = [...(await parseImports(code))].filter((i) => {
+    if (i.isDynamicImport) return;
+    if (code.slice(i.startIndex, i.startIndex + 6) == "import") return true;
+
+    i.isExport = true;
+    exports.push(i);
+  });
+
+  return [imports, exports];
+}
+
+const removeFromString = (string, start, end) =>
+  string.slice(0, start) + string.slice(end);
+
+const insertIntoString = (string, start, newString) =>
+  string.slice(0, start) + newString + string.slice(start);
 
 const destructurifyImp = (obj) =>
   Object.entries(obj)
@@ -20,44 +41,58 @@ export default async function quartz(
   for (const plugin of config.plugins)
     if (plugin.transform) code = plugin.transform({ code });
 
-  const imports = findStaticImports(code);
-  const exports = findExports(code);
+  const [imports, exports] = await betterParseImports(code);
 
-  let fakeImports = "";
+  // I don't want to have to parse any of this shit more than once.
+  let offset = 0;
+
   for (const exp of exports) {
-    if (exp.type !== "named" || !exp.specifier) continue;
+    imports.push(exp);
 
-    fakeImports += "import" + exp.code.slice(6) + ";";
+    const startIndex = exp.startIndex + offset;
+    const endIndex = exp.endIndex + offset;
 
-    exp.code = exp.code
-      .slice(0, exp.code.lastIndexOf("from"))
-      .replaceAll(/\w+ as/g, "")
-      .trim();
-    exp.specifier = undefined;
+    const namespace = exp.importClause.namespace;
+    if (namespace != undefined) {
+      // Because of how `export * from "module"` works, we can't dynamically export things.
+      // My proposal is that we have a $$$QUARTZ_DYNAMIC_EXPORTS object passed through,
+      // we add a randomly generated namespace, and then we convert the export into reassigning $$$QUARTZ_DYNAMIC_EXPORTS.
+      // We then spread the exports and the dynamic exports together and return that as the exports.
+
+      if (namespace != "") {
+        code = removeFromString(code, startIndex, endIndex);
+        const newExport = `export { ${namespace} };`;
+        code = insertIntoString(code, startIndex, newExport);
+
+        offset -= endIndex - startIndex + newExport.length;
+      }
+
+      continue;
+    }
+
+    const fromIndex =
+      startIndex + code.slice(startIndex, endIndex).lastIndexOf("from");
+    code = removeFromString(code, fromIndex, endIndex);
+    offset -= endIndex - fromIndex;
   }
-
-  imports.push(
-    ...findStaticImports(fakeImports).map((f) => {
-      f.fake = true;
-      return f;
-    })
-  );
 
   let quartzStore = {};
 
   for (const imp of imports) {
-    if (!imp.fake)
-      code =
-        code.slice(0, imp.start - 1) +
-        " ".repeat(imp.end - imp.start) +
-        code.slice(imp.end - 1);
+    if (!imp.isExport) {
+      code = removeFromString(
+        code,
+        imp.startIndex + offset,
+        imp.endIndex + offset
+      );
+
+      offset -= imp.endIndex + offset - (imp.startIndex + offset);
+    }
 
     let id = (Math.random() + 1).toString(36).substring(7);
 
     let store = (quartzStore[id] = {});
     let accessor = `$$$QUARTZ_STORE["${id}"]`;
-
-    const parsedImport = parseStaticImport(imp);
 
     for (const plugin of config.plugins) {
       if (!plugin.resolve) continue;
@@ -66,7 +101,7 @@ export default async function quartz(
         config,
         accessor,
         store,
-        name: parsedImport.specifier,
+        name: imp.moduleSpecifier.value,
         moduleId,
       });
 
@@ -75,55 +110,26 @@ export default async function quartz(
       const addImport = (name) =>
         (generatedImports += `const ${name} = ${generatedImport};`);
 
-      if (parsedImport.defaultImport)
-        addImport(`{default:${parsedImport.defaultImport}}`);
-      if (parsedImport.namespacedImport)
-        addImport(parsedImport.namespacedImport);
-      if (Object.keys(parsedImport.namedImports).length)
-        addImport("{" + destructurifyImp(parsedImport.namedImports) + "}");
+      const { importClause } = imp;
 
-      // Once we've handled the resolves for this import, we stop.
-      break;
+      if (importClause.default) addImport(`{default:${importClause.default}}`);
+      if (importClause.namespace) addImport(importClause.namespace);
+      if (importClause.named.length > 0) {
+        for (const name of importClause.named) {
+          addImport(`{${name.specifier}:${name.binding}}`);
+        }
+      }
     }
   }
 
-  let offset = 0;
-  for (const exp of exports) {
-    let assigner = "";
+  // This appears to be the only way to share things between realms.
+  const globalStoreID = (Math.random() + 1).toString(36).substring(7);
+  globalThis[globalStoreID] = quartzStore;
 
-    switch (exp.type) {
-      case "default":
-        assigner = "$$$QUARTZ_EXPORTS.default=";
-        break;
-      case "declaration":
-        assigner =
-          exp.declaration !== "function"
-            ? `$$$QUARTZ_EXPORTS["${exp.name}"]`
-            : `$$$QUARTZ_EXPORTS["${exp.name}"]=function ${exp.name}`;
-        break;
-      case "named":
-        assigner = `$$$QUARTZ_EXPORTS = { ...$$$QUARTZ_EXPORTS, ${destructurifyExp(
-          parseStaticImport(
-            findStaticImports(
-              `import${exp.code.slice(6)} from "fake-module"`
-            )[0]
-          ).namedImports
-        )}};`;
-        break;
-      default:
-        break;
-    }
+  // console.log(generatedImports + code)
 
-    code =
-      code.slice(0, exp.start + offset) +
-      assigner +
-      code.slice(exp.end + offset);
+  const mod = await import(`data:text/javascript;base64,${btoa(`const $$$QUARTZ_STORE = globalThis["${globalStoreID}"];` + generatedImports + code)}`)
+  delete globalThis[globalStoreID];
 
-    offset -= exp.end - exp.start;
-    offset += assigner.length;
-  }
-
-  return (0, eval)(
-    `(async ($$$QUARTZ_STORE, $$$QUARTZ_EXPORTS) => {${generatedImports}${code};return $$$QUARTZ_EXPORTS})`
-  )(quartzStore, {});
+  return mod;
 }
