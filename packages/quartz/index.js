@@ -1,35 +1,93 @@
-import parseImports from "parse-imports";
+import { parse } from "es-module-lexer";
 
-async function betterParseImports(code) {
-  const exports = [];
+// This needs support for 3 things to be "complete":
+// 1. `import "./module.js"`
+// 2. `await import("module")`
+// 3. `export * from "module"`
+// For now, it's fine.
 
-  // This looks stupid but it's less iterations
-  const imports = [...(await parseImports(code))].filter((i) => {
-    if (i.isDynamicImport) return;
-    if (code.slice(i.startIndex, i.startIndex + 6) == "import") return true;
+async function betterParse(src) {
+  let [imports] = await parse(src);
+  let exports = [];
 
-    i.isExport = true;
-    exports.push(i);
+  imports = imports.filter((imp) => {
+    imp.declaration = src
+      .slice(imp.ss, imp.se)
+      .replace(/\/\*[\w\W]*?\*\//g, "");
+    imp.importClause = imp.declaration
+      .slice(6, imp.declaration.lastIndexOf("from"))
+      .trim();
+
+    const namedImportOpener = imp.importClause.indexOf("{");
+    const namedImportCloser = imp.importClause.indexOf("}") + 1;
+
+    imp.namedImport = imp.importClause.slice(
+      namedImportOpener,
+      namedImportCloser
+    );
+
+    if (imp.namedImport != "") {
+      imp.importClause =
+        imp.importClause.slice(0, namedImportOpener) +
+        imp.importClause.slice(namedImportCloser);
+
+      imp.namedImports = imp.namedImport
+        .slice(1, -1)
+        .trim()
+        .split(",")
+        .filter((i) => i.trim() != "")
+        .map((i) => {
+          const split = i.trim().split(" as ");
+
+          if (!split[1]) split[1] = split[0];
+          return split;
+        })
+        .reduce((obj, c) => {
+          obj[c[0]] = c[1];
+
+          return obj;
+        }, {});
+    }
+
+    const commaIndex = imp.importClause.indexOf(",");
+
+    if (imp.namedImport == "") {
+      const namespace =
+        commaIndex == -1
+          ? imp.importClause
+          : imp.importClause.slice(commaIndex + 1).trim();
+
+      if (namespace[0] == "*")
+        imp.namespace = namespace.slice(namespace.indexOf("as") + 2).trim();
+    }
+
+    // If there's no named imports and there's no namespaces, the default export *is* the importClause
+    if (imp.namedImport == "" && !imp.namespace) {
+      imp.default = imp.importClause;
+    } else if (commaIndex != -1) {
+      // Otherwise, the default export *must* come before the comma
+      imp.default = imp.importClause.slice(0, commaIndex);
+    }
+
+    if (imp.declaration.slice(0, 6) == "import") return true;
+
+    imp.isExport = true;
+    exports.push(imp);
   });
 
   return [imports, exports];
 }
-
-const removeFromString = (string, start, end) =>
-  string.slice(0, start) + string.slice(end);
-
-const insertIntoString = (string, start, newString) =>
-  string.slice(0, start) + newString + string.slice(start);
 
 const destructurifyImp = (obj) =>
   Object.entries(obj)
     .map(([k, v]) => `${k}:${v}`)
     .join();
 
-const destructurifyExp = (obj) =>
-  Object.entries(obj)
-    .map(([k, v]) => `${v}:${k}`)
-    .join();
+const removeFromString = (string, start, end) =>
+  string.slice(0, start) + string.slice(end);
+
+const insertIntoString = (string, start, newString) =>
+  string.slice(0, start) + newString + string.slice(start);
 
 export default async function quartz(
   code,
@@ -41,7 +99,7 @@ export default async function quartz(
   for (const plugin of config.plugins)
     if (plugin.transform) code = plugin.transform({ code });
 
-  const [imports, exports] = await betterParseImports(code);
+  const [imports, exports] = await betterParse(code);
 
   // I don't want to have to parse any of this shit more than once.
   let offset = 0;
@@ -49,10 +107,10 @@ export default async function quartz(
   for (const exp of exports) {
     imports.push(exp);
 
-    const startIndex = exp.startIndex + offset;
-    const endIndex = exp.endIndex + offset;
+    const startIndex = exp.ss + offset;
+    const endIndex = exp.se + offset;
 
-    const namespace = exp.importClause.namespace;
+    const namespace = exp.namespace;
     if (namespace != undefined) {
       // Because of how `export * from "module"` works, we can't dynamically export things.
       // My proposal is that we have a $$$QUARTZ_DYNAMIC_EXPORTS object passed through,
@@ -80,13 +138,9 @@ export default async function quartz(
 
   for (const imp of imports) {
     if (!imp.isExport) {
-      code = removeFromString(
-        code,
-        imp.startIndex + offset,
-        imp.endIndex + offset
-      );
+      code = removeFromString(code, imp.ss + offset, imp.se + offset);
 
-      offset -= imp.endIndex + offset - (imp.startIndex + offset);
+      offset -= imp.se + offset - (imp.ss + offset);
     }
 
     let id = (Math.random() + 1).toString(36).substring(7);
@@ -101,7 +155,7 @@ export default async function quartz(
         config,
         accessor,
         store,
-        name: imp.moduleSpecifier.value,
+        name: imp.n,
         moduleId,
       });
 
@@ -110,14 +164,10 @@ export default async function quartz(
       const addImport = (name) =>
         (generatedImports += `const ${name} = ${generatedImport};`);
 
-      const { importClause } = imp;
-
-      if (importClause.default) addImport(`{default:${importClause.default}}`);
-      if (importClause.namespace) addImport(importClause.namespace);
-      if (importClause.named.length > 0) {
-        for (const name of importClause.named) {
-          addImport(`{${name.specifier}:${name.binding}}`);
-        }
+      if (imp.default) addImport(`{default:${imp.default}}`);
+      if (imp.namespace) addImport(imp.namespace);
+      if (imp.namedImports) {
+        addImport("{" + destructurifyImp(imp.namedImports) + "}");
       }
     }
   }
@@ -128,7 +178,13 @@ export default async function quartz(
 
   // console.log(generatedImports + code)
 
-  const mod = await import(`data:text/javascript;base64,${btoa(`const $$$QUARTZ_STORE = globalThis["${globalStoreID}"];` + generatedImports + code)}`)
+  const mod = await import(
+    `data:text/javascript;base64,${btoa(
+      `const $$$QUARTZ_STORE = globalThis["${globalStoreID}"];` +
+        generatedImports +
+        code
+    )}`
+  );
   delete globalThis[globalStoreID];
 
   return mod;
