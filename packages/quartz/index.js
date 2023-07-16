@@ -169,6 +169,8 @@ export default async function quartz(
       if (imp.namedImports) {
         addImport("{" + destructurifyImp(imp.namedImports) + "}");
       }
+
+      break;
     }
   }
 
