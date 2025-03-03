@@ -143,8 +143,6 @@ export default async function quartz(
 
         const res = await plugin.dynamicResolve({
           config,
-          accessor,
-          store,
           name: path,
           moduleId,
         });
