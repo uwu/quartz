@@ -1,9 +1,8 @@
 import { parse } from "es-module-lexer";
 
-// This needs support for 3 things to be "complete":
+// This needs support for 2 things to be "complete":
 // 1. `import "./module.js"`
-// 2. `await import("module")`
-// 3. `export * from "module"`
+// 2. `export * from "module"`
 // For now, it's fine.
 
 async function betterParse(src) {
@@ -13,10 +12,13 @@ async function betterParse(src) {
   imports = imports.filter((imp) => {
     imp.declaration = src
       .slice(imp.ss, imp.se)
-      .replace(/\/\*[\w\W]*?\*\//g, "");
+      .replace(/\/\*[\w\W]*?\*\//g, ""); // this removes the comments from the import
     imp.importClause = imp.declaration
       .slice(6, imp.declaration.lastIndexOf("from"))
       .trim();
+
+    if (imp.importClause[0] == "(") imp.isDynamic = true;
+    if (imp.importClause[0] == '"') imp.isSideEffectful = true;
 
     const namedImportOpener = imp.importClause.indexOf("{");
     const namedImportCloser = imp.importClause.indexOf("}") + 1;
@@ -134,9 +136,37 @@ export default async function quartz(
     offset -= endIndex - fromIndex;
   }
 
-  let quartzStore = {};
+  let quartzStore = {
+    async dynamicResolver(path) {
+      for (const plugin of config.plugins) {
+        if (!plugin.dynamicResolve) continue;
+
+        const res = await plugin.dynamicResolve({
+          config,
+          accessor,
+          store,
+          name: path,
+          moduleId,
+        });
+
+        if (res) return res;
+      }
+    },
+  };
 
   for (const imp of imports) {
+    if (imp.isDynamic) {
+      // remove import line
+      code = removeFromString(code, imp.ss + offset, imp.ss + 6 + offset);
+      code =
+        code.slice(0, imp.ss + offset) +
+        "$$$QUARTZ_DYNAMIC_RESOLVE" +
+        code.slice(imp.ss + offset);
+      offset += 19; // changing to $$$QUARTZ_DYNAMIC_RESOLVE adds 19 chars
+
+      continue;
+    }
+
     if (!imp.isExport) {
       code = removeFromString(code, imp.ss + offset, imp.se + offset);
 
@@ -178,11 +208,9 @@ export default async function quartz(
   const globalStoreID = (Math.random() + 1).toString(36).substring(7);
   globalThis[globalStoreID] = quartzStore;
 
-  // console.log(generatedImports + code)
-
   const mod = await import(
     `data:text/javascript;base64,${btoa(
-      `const $$$QUARTZ_STORE = globalThis["${globalStoreID}"];` +
+      `const $$$QUARTZ_STORE = globalThis["${globalStoreID}"];const $$$QUARTZ_DYNAMIC_RESOLVE = $$$QUARTZ_STORE.dynamicResolver;` +
         generatedImports +
         code
     )}`
