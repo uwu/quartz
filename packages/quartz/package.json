@@ -1,6 +1,6 @@
 {
   "name": "@uwu/quartz",
-  "version": "1.3.7",
+  "version": "1.4.0",
   "description": "A simple JavaScript transform tool meant to be used at runtime.",
   "main": "index.js",
   "module": "index.js",
