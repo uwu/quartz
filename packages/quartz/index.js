@@ -207,7 +207,7 @@ export default async function quartz(
   globalThis[globalStoreID] = quartzStore;
 
   const mod = await import(
-    `data:text/javascript;base64,${btoa(
+    `data:text/javascript;charset=UTF-8,${encodeURIComponent(
       `const $$$QUARTZ_STORE = globalThis["${globalStoreID}"];const $$$QUARTZ_DYNAMIC_RESOLVE = $$$QUARTZ_STORE.dynamicResolver;` +
         generatedImports +
         code
