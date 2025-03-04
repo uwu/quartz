@@ -1,8 +1,7 @@
 import { parse } from "es-module-lexer";
 
-// This needs support for 2 things to be "complete":
-// 1. `import "./module.js"`
-// 2. `export * from "module"`
+// This needs support for the following to work "fully":
+// `export * from "module"`
 // For now, it's fine.
 
 async function betterParse(src) {
@@ -90,6 +89,19 @@ const removeFromString = (string, start, end) =>
 
 const insertIntoString = (string, start, newString) =>
   string.slice(0, start) + newString + string.slice(start);
+
+function generateRandomString(length) {
+  const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+
+  let result = "";
+
+  for (let i = 0; i < length; i++) {
+    const randomIndex = Math.floor(Math.random() * characters.length);
+    result += characters.charAt(randomIndex);
+  }
+
+  return result;
+}
 
 export default async function quartz(
   code,
@@ -192,10 +204,14 @@ export default async function quartz(
       const addImport = (name) =>
         (generatedImports += `const ${name} = ${generatedImport};`);
 
-      if (imp.default) addImport(`{default:${imp.default}}`);
-      if (imp.namespace) addImport(imp.namespace);
-      if (imp.namedImports) {
-        addImport("{" + destructurifyImp(imp.namedImports) + "}");
+      if (imp.isSideEffectful) {
+        generatedImports += `${generatedImport};`;
+      } else {
+        if (imp.default) addImport(`{default:${imp.default}}`);
+        if (imp.namespace) addImport(imp.namespace);
+        if (imp.namedImports) {
+          addImport("{" + destructurifyImp(imp.namedImports) + "}");
+        }
       }
 
       break;
@@ -203,7 +219,7 @@ export default async function quartz(
   }
 
   // This appears to be the only way to share things between realms.
-  const globalStoreID = (Math.random() + 1).toString(36).substring(7);
+  const globalStoreID = "QZ_" + generateRandomString(7);
   globalThis[globalStoreID] = quartzStore;
 
   const mod = await import(
@@ -213,6 +229,7 @@ export default async function quartz(
         code
     )}`
   );
+
   delete globalThis[globalStoreID];
 
   return mod;
