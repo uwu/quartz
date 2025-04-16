@@ -222,13 +222,15 @@ export default async function quartz(
   const globalStoreID = "QZ_" + generateRandomString(7);
   globalThis[globalStoreID] = quartzStore;
 
-  const mod = await import(
-    `data:text/javascript;charset=UTF-8,${encodeURIComponent(
-      `const $$$QUARTZ_STORE = globalThis["${globalStoreID}"];const $$$QUARTZ_DYNAMIC_RESOLVE = $$$QUARTZ_STORE.dynamicResolver;` +
-        generatedImports +
-        code
-    )}`
-  );
+  const fullCode = `
+    const $$$QUARTZ_STORE = globalThis["${globalStoreID}"];
+    const $$$QUARTZ_DYNAMIC_RESOLVE = $$$QUARTZ_STORE.dynamicResolver;
+    ${generatedImports}
+    ${code}
+  `;
+  
+  const blobURL = URL.createObjectURL(new Blob([fullCode], { type: 'text/javascript' }));
+  const mod = await import(blobURL);
 
   delete globalThis[globalStoreID];
 
