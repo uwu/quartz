@@ -16,6 +16,12 @@ export type QuartzPlugin = {
 		name: string,
 		moduleId: string
 	}): MaybePromise<string | undefined>
+
+	dynamicResolve?(ctx: {
+		config: QuartzConfig,
+		name: string,
+		moduleId: string
+	}): Promise<object>
 }
 
 declare const _default: (code: string, config: QuartzConfig, moduleId?: string) => Promise<object>;
